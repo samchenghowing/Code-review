@@ -1,0 +1,7 @@
+ftpServer=eids.ftp
+ftpPassword=1234
+ftpOPSContentPath=ftp://192.168.14.80:30000/OPS/online/WRL/1.0.0/contents/
+ftpOPSXMLPath=ftp://192.168.14.80:30000/OPS/online/WRL/1.0.0/
+localOPSContentPath=C:\ContentsAndLog\temp\contents\
+localOPSXMLPath=C:\ContentsAndLog\temp\OPS\online\
+LogPath=C:\ContentsAndLog\temp\

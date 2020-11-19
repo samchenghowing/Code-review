@@ -1,0 +1,8 @@
+﻿  testC++CHAR.cpp
+C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\testC++CHAR.cpp(78,23): warning C4805: '==': unsafe mix of type 'int' and type 'bool' in operation
+  Generating code
+  1 of 121 functions ( 0.8%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  testC++CHAR.vcxproj -> C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\Release\testC++CHAR.exe

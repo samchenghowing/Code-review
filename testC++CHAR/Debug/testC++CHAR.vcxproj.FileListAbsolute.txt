@@ -1,0 +1,4 @@
+C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\Debug\testC++CHAR.exe
+C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\Debug\testC++CHAR.pdb
+C:\Users\samch\Desktop\roctec\2020\EMSD Backup\testC++CHAR\Debug\testC++CHAR.exe
+C:\Users\samch\Desktop\roctec\2020\EMSD Backup\testC++CHAR\Debug\testC++CHAR.pdb

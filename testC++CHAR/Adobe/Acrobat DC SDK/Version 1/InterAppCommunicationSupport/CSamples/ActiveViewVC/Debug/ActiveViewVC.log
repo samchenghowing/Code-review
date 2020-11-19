@@ -1,0 +1,14 @@
+﻿  stdafx.cpp
+  _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
+  acrobat.cpp
+  ActiveView.cpp
+  ActiveViewDoc.cpp
+c:\users\cheng ho wing\desktop\oldprojects\testc++char\adobe\acrobat dc sdk\version 1\interappcommunicationsupport\csamples\activeviewvc\sources\activeviewdoc.cpp(389): warning C4477: 'sprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'CString'
+c:\users\cheng ho wing\desktop\oldprojects\testc++char\adobe\acrobat dc sdk\version 1\interappcommunicationsupport\csamples\activeviewvc\sources\activeviewdoc.cpp(435): warning C4477: 'sprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'CString'
+c:\users\cheng ho wing\desktop\oldprojects\testc++char\adobe\acrobat dc sdk\version 1\interappcommunicationsupport\csamples\activeviewvc\sources\activeviewdoc.cpp(461): warning C4477: 'sprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'CString'
+c:\users\cheng ho wing\desktop\oldprojects\testc++char\adobe\acrobat dc sdk\version 1\interappcommunicationsupport\csamples\activeviewvc\sources\activeviewdoc.cpp(474): warning C4477: 'sprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'CString'
+  ActiveViewVw.cpp
+  MainFrm.cpp
+  Generating Code...
+acrobat.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+  ActiveViewVC.vcxproj -> C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\Adobe\Acrobat DC SDK\Version 1\InterAppCommunicationSupport\CSamples\ActiveViewVC\.\Debug\ActiveViewVC.exe

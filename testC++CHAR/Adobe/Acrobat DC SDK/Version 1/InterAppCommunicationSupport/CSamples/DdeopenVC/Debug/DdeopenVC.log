@@ -1,0 +1,3 @@
+﻿  DdeOpen.cpp
+DdeOpen.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+  DdeopenVC.vcxproj -> C:\Users\Cheng Ho Wing\Desktop\oldProjects\testC++CHAR\Adobe\Acrobat DC SDK\Version 1\InterAppCommunicationSupport\CSamples\DdeopenVC\.\Debug\DdeopenVC.exe

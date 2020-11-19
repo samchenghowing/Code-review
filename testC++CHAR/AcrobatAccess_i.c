@@ -1,0 +1,117 @@
+
+
+/* this ALWAYS GENERATED file contains the IIDs and CLSIDs */
+
+/* link this file in with the server and any clients */
+
+
+ /* File created by MIDL compiler version 8.01.0622 */
+/* at Tue Jan 19 11:14:07 2038
+ */
+/* Compiler settings for AcrobatAccess.idl:
+    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
+    protocol : dce , ms_ext, c_ext, robust
+    error checks: allocation ref bounds_check enum stub_data 
+    VC __declspec() decoration level: 
+         __declspec(uuid()), __declspec(selectany), __declspec(novtable)
+         DECLSPEC_UUID(), MIDL_INTERFACE()
+*/
+/* @@MIDL_FILE_HEADING(  ) */
+
+
+
+#ifdef __cplusplus
+extern "C"{
+#endif 
+
+
+#include <rpc.h>
+#include <rpcndr.h>
+
+#ifdef _MIDL_USE_GUIDDEF_
+
+#ifndef INITGUID
+#define INITGUID
+#include <guiddef.h>
+#undef INITGUID
+#else
+#include <guiddef.h>
+#endif
+
+#define MIDL_DEFINE_GUID(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
+        DEFINE_GUID(name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8)
+
+#else // !_MIDL_USE_GUIDDEF_
+
+#ifndef __IID_DEFINED__
+#define __IID_DEFINED__
+
+typedef struct _IID
+{
+    unsigned long x;
+    unsigned short s1;
+    unsigned short s2;
+    unsigned char  c[8];
+} IID;
+
+#endif // __IID_DEFINED__
+
+#ifndef CLSID_DEFINED
+#define CLSID_DEFINED
+typedef IID CLSID;
+#endif // CLSID_DEFINED
+
+#define MIDL_DEFINE_GUID(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
+        EXTERN_C __declspec(selectany) const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
+
+#endif // !_MIDL_USE_GUIDDEF_
+
+MIDL_DEFINE_GUID(IID, IID_IAccID,0x81f9b44f,0xba3a,0x4f5d,0x9b,0x51,0x09,0x0c,0x74,0xa9,0xb3,0xa4);
+
+
+MIDL_DEFINE_GUID(IID, IID_ISelectText,0xB4848E37,0x7C66,0x40a6,0x9F,0x66,0xD3,0xA9,0xBC,0x8F,0x46,0x36);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomNode,0x5007373a,0x20d7,0x458f,0x9f,0xfb,0xab,0xc9,0x00,0xe3,0xa8,0x31);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomNodeExt,0x4A894040,0x247E,0x4aff,0xBB,0x08,0x34,0x89,0xE9,0x90,0x52,0x35);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomElement,0x198f17ae,0xb921,0x4308,0x95,0x43,0x28,0x8d,0x42,0x6a,0x5c,0x2b);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomWord,0x03c2aea5,0xbefa,0x4c84,0xa1,0x87,0xc9,0x24,0x5a,0xc7,0x84,0xf6);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomDocument,0x00FFD6C4,0x1A94,0x44bc,0xAD,0x3E,0x8A,0xC1,0x85,0x52,0xE3,0xE6);
+
+
+MIDL_DEFINE_GUID(IID, IID_IGetPDDomNode,0xf9f2fe81,0xf764,0x4bd0,0xaf,0xa5,0x5d,0xe8,0x41,0xdd,0xb6,0x25);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomGroupInfo,0x35ADDC4B,0xB470,0x45f9,0xB2,0x9C,0xB6,0x84,0x59,0x49,0xA4,0xFE);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomGlobalOptions,0xC37B1794,0xB61E,0x402b,0x9C,0x7C,0xB0,0x73,0xDE,0x57,0x9A,0xC1);
+
+
+MIDL_DEFINE_GUID(IID, IID_IPDDomDocPagination,0x8E6D1CB7,0x4DAE,0x4DE4,0x8E,0xD9,0x15,0x67,0x2A,0x5F,0x94,0x2F);
+
+
+MIDL_DEFINE_GUID(IID, LIBID_AcrobatAccessLib,0xC523F390,0x9C83,0x11D3,0x90,0x94,0x00,0x10,0x4B,0xD0,0xD5,0x35);
+
+
+MIDL_DEFINE_GUID(CLSID, CLSID_Accessible,0xC523F39F,0x9C83,0x11D3,0x90,0x94,0x00,0x10,0x4B,0xD0,0xD5,0x35);
+
+
+MIDL_DEFINE_GUID(CLSID, CLSID_PDDom,0xECAF4D9D,0xB473,0x4EC5,0x86,0xF4,0x3D,0xBB,0x46,0xF3,0xF3,0x1A);
+
+#undef MIDL_DEFINE_GUID
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
