@@ -1,0 +1,872 @@
+package JsonToGeoJson;
+
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.io.FileNotFoundException;
+import org.json.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets; 
+
+public class jsonToGeoJSON {
+	
+	public static ArrayList<features> UPDatalist = new ArrayList<features>();
+	public static ArrayList<features> DOWNDatalist = new ArrayList<features>();
+	public static ArrayList<webFeatures> webDatalist = new ArrayList<webFeatures>();
+	public static String token;
+	public static ArrayList<queryResult> MapIDList = new ArrayList<queryResult>();//Map ObjectID and location list
+	public static HashMap<String, features> pointsOnMap = new HashMap<String, features>();//key = OBJECTID(from map), element = found feature
+	
+	public static void main(String[] args) throws JSONException, IOException {
+		//initialize the database (load up and down data to array list, add a buffer to hash map first)
+		readUPJSON("twl_up.geojson");
+		readDOWNJSON("twl_down.geojson");		
+		features buffer = new features(null, 0, null, 0, 0, 0, 0, null, null, 0, 0, 0);
+		buffer.setTrackerSerialNo("12345678");
+		pointsOnMap.put("1", buffer);//this must be added to make below's for loop work
+		//end of init	
+		
+		//code below will loop forever
+		//all the changes on map belongs to webdata's change(input)
+		//1.get the input from web, compare with local's data and get result
+		//2.put the result on both map and hash map,
+		//3.if any changes, change the hash map's data and map data follow
+		//4.query the map and delete the points on map but not on hash map
+		while(true){
+			try {
+				String tokenMessage = getToken();
+				JSONObject jsonObject = new JSONObject(tokenMessage);
+				token = jsonObject.getString("access_token");//now we store the access_token in token
+				
+				String webData = getWebData();//send get request to get a json string
+				//String fileName = writeWebJSONtoFile(webData);
+				//readWebfileJSON(fileName);//add webdata to webDatalist, file name: "webData.json"		
+				readWebData(webData);
+				//readWebfileJSON("geojson sample.json");//testing use only
+				
+				/*
+					The for loop below is use for comparing the server data
+					(local database) and web data, then push the found data to esri map.
+					The comparing method(not in tunnel) is not perfect and must be modified later.
+				*/ 				
+				for(int i = 0; i < webDatalist.size(); i++) {				
+					//System.out.println("Train in tunnel:"+webDatalist.get(i).determineTrainIntunnel()+", train up track:" +webDatalist.get(i).determineTrainUPDOWN());
+					
+					if(webDatalist.get(i).determineTrainIntunnel() == true) {//train in tunnel, compare with minor
+						
+						if(webDatalist.get(i).determineTrainUPDOWN() == true) {
+							//up //XX01
+							int min = Integer.parseInt(webDatalist.get(i).getminor());
+							int idx = 0;			
+							//minor = objectID
+							for(int j = 0; j < UPDatalist.size(); j++) {
+								if(min == UPDatalist.get(j).getObjectID()) {
+									idx = j;
+								}
+							}
+							int theNumber = UPDatalist.get(idx).getId() - 1;
+							
+							//now we found the data, gettracker_serial_no to know it is already on hash map	(map will look up hash map)				
+							features bufferFeature = UPDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());//add the key //System.out.println(bufferFeature.toString());
+							bufferFeature.setWorker_name(webDatalist.get(i).getworker_name());
+							
+							boolean needToAdd = false;
+							boolean needToEdit = false;
+							String ObjectIDToRemove = null;
+							String ObjectIDToAdd = null;
+							for (String ObjectID : pointsOnMap.keySet()) {//this loop will search the hash map
+								
+								if(pointsOnMap.get(ObjectID).getTrackerSerialNo().equals(bufferFeature.getTrackerSerialNo())) {
+									//need to update the old one
+									editFeatures(bufferFeature.toOutputEditJSON(ObjectID));//update map
+									ObjectIDToRemove = ObjectID;
+									needToEdit = true;
+								}
+								else {
+									//add point in map and store the new key(returned ObjectID) in hash map
+									String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
+									JSONObject jsonObject2 = new JSONObject(addMessage);
+									int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
+									needToAdd = true;
+									ObjectIDToAdd = Integer.toString(returnObjectID);
+								}
+								//need to check hash map itself after the loop end!!!
+							}
+							if(needToEdit == true) {
+								pointsOnMap.remove(ObjectIDToRemove);//remove the old item in hash map
+								pointsOnMap.put(ObjectIDToRemove, bufferFeature);//add new one in hash map(edit will not change the ObjectID)
+								needToEdit = false;
+							}
+							if(needToAdd == true) {
+								pointsOnMap.put(ObjectIDToAdd, bufferFeature);
+								needToAdd = false;
+							}
+						}else if(webDatalist.get(i).determineTrainUPDOWN() == false) {
+							//DOWN //XX02
+							int min = Integer.parseInt(webDatalist.get(i).getminor());
+							int idx = 0;					
+							//minor = objectID
+							for(int j = 0; j < DOWNDatalist.size(); j++) {
+								if(min == DOWNDatalist.get(j).getObjectID()) {
+									idx = j;
+								}
+							}
+							int theNumber = DOWNDatalist.get(idx).getId() - 1;
+							/*
+							//geoJSONObjectList.add(DOWNDatalist.get(theNumber));
+							features bufferFeature = DOWNDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());
+							geoJSONObjectList.add(bufferFeature);				
+							*/
+							//now we found the data, gettracker_serial_no to know it is already on hash map	(map will look up hash map)				
+							features bufferFeature = DOWNDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());//add the key //System.out.println(bufferFeature.toString());
+							bufferFeature.setWorker_name(webDatalist.get(i).getworker_name());
+							
+							boolean needToAdd = false;
+							boolean needToEdit = false;
+							String ObjectIDToRemove = null;
+							String ObjectIDToAdd = null;
+							for (String ObjectID : pointsOnMap.keySet()) {//this loop will search the hash map
+								
+								if(pointsOnMap.get(ObjectID).getTrackerSerialNo().equals(bufferFeature.getTrackerSerialNo())) {
+									//need to update the old one
+									editFeatures(bufferFeature.toOutputEditJSON(ObjectID));//update map
+									ObjectIDToRemove = ObjectID;
+									needToEdit = true;
+								}
+								else {
+									//add point in map and store the new key(returned ObjectID) in hash map
+									String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
+									JSONObject jsonObject2 = new JSONObject(addMessage);
+									int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
+									needToAdd = true;
+									ObjectIDToAdd = Integer.toString(returnObjectID);
+								}
+								//need to check hash map itself after the loop end!!!
+							}
+							if(needToEdit == true) {
+								pointsOnMap.remove(ObjectIDToRemove);//remove the old item in hash map
+								pointsOnMap.put(ObjectIDToRemove, bufferFeature);//add new one in hash map(edit will not change the ObjectID)
+								needToEdit = false;
+							}
+							if(needToAdd == true) {
+								pointsOnMap.put(ObjectIDToAdd, bufferFeature);
+								needToAdd = false;
+							}
+						}
+					
+					}
+					else {//train not in tunnel, compare with GPS
+						
+						if(webDatalist.get(i).determineTrainUPDOWN() == true) {							
+							//search by coordinates	
+							double Xdistance = Math.abs(UPDatalist.get(0).getXcoordinate() - webDatalist.get(i).getlocation_long());
+							//double Ydistance = Math.abs(UPDatalist.get(0).getYcoordinate() - webDatalist.get(i).getlocation_lat());
+							int idx = 0;
+							for(int j = 1; j < UPDatalist.size(); j++) {
+								double cdistance = Math.abs(UPDatalist.get(i).getXcoordinate() - webDatalist.get(i).getlocation_long());
+								 if(cdistance < Xdistance){
+								        idx = j;
+								        Xdistance = cdistance;
+								 }
+							}
+							int theNumber = UPDatalist.get(idx).getId() - 1;	
+							/*
+							features bufferFeature = UPDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());
+							geoJSONObjectList.add(bufferFeature);				
+							*/
+							//now we found the data, gettracker_serial_no to know it is already on hash map	(map will look up hash map)				
+							features bufferFeature = UPDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());//add the key //System.out.println(bufferFeature.toString());
+							bufferFeature.setWorker_name(webDatalist.get(i).getworker_name());
+							
+							boolean needToAdd = false;
+							boolean needToEdit = false;
+							String ObjectIDToRemove = null;
+							String ObjectIDToAdd = null;
+							for (String ObjectID : pointsOnMap.keySet()) {//this loop will search the hash map
+								
+								if(pointsOnMap.get(ObjectID).getTrackerSerialNo().equals(bufferFeature.getTrackerSerialNo())) {
+									//need to update the old one
+									editFeatures(bufferFeature.toOutputEditJSON(ObjectID));//update map
+									ObjectIDToRemove = ObjectID;
+									needToEdit = true;
+								}
+								else {
+									//add point in map and store the new key(returned ObjectID) in hash map
+									String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
+									JSONObject jsonObject2 = new JSONObject(addMessage);
+									int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
+									needToAdd = true;
+									ObjectIDToAdd = Integer.toString(returnObjectID);
+								}
+								//need to check hash map itself after the loop end!!!
+							}
+							if(needToEdit == true) {
+								pointsOnMap.remove(ObjectIDToRemove);//remove the old item in hash map
+								pointsOnMap.put(ObjectIDToRemove, bufferFeature);//add new one in hash map(edit will not change the ObjectID)
+								needToEdit = false;
+							}
+							if(needToAdd == true) {
+								pointsOnMap.put(ObjectIDToAdd, bufferFeature);
+								needToAdd = false;
+							}
+						}
+						else if(webDatalist.get(i).determineTrainUPDOWN() == false){							
+							//search by coordinates
+							double Xdistance = Math.abs(DOWNDatalist.get(0).getXcoordinate() - webDatalist.get(i).getlocation_long());
+							//double Ydistance = Math.abs(DOWNDatalist.get(0).getYcoordinate() - webDatalist.get(i).getlocation_lat());
+							int idx = 0;
+							for(int j = 1; j < DOWNDatalist.size(); j++) {
+								double cdistance = Math.abs(DOWNDatalist.get(i).getXcoordinate() - webDatalist.get(i).getlocation_long());
+								 if(cdistance < Xdistance){
+								        idx = j;
+								        Xdistance = cdistance;
+								 }
+							}				
+							int theNumber = DOWNDatalist.get(idx).getId() - 1;
+							/*
+							features bufferFeature = DOWNDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());
+							geoJSONObjectList.add(bufferFeature);	
+							*/
+							//now we found the data, gettracker_serial_no to know it is already on hash map	(map will look up hash map)				
+							features bufferFeature = DOWNDatalist.get(theNumber);
+							bufferFeature.setTrackerSerialNo(webDatalist.get(i).gettracker_serial_no());//add the key //System.out.println(bufferFeature.toString());
+							bufferFeature.setWorker_name(webDatalist.get(i).getworker_name());
+							
+							boolean needToAdd = false;
+							boolean needToEdit = false;
+							String ObjectIDToRemove = null;
+							String ObjectIDToAdd = null;
+							for (String ObjectID : pointsOnMap.keySet()) {//this loop will search the hash map
+								
+								if(pointsOnMap.get(ObjectID).getTrackerSerialNo().equals(bufferFeature.getTrackerSerialNo())) {
+									//need to update the old one
+									editFeatures(bufferFeature.toOutputEditJSON(ObjectID));//update map
+									ObjectIDToRemove = ObjectID;
+									needToEdit = true;
+								}
+								else {
+									//add point in map and store the new key(returned ObjectID) in hash map
+									String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
+									JSONObject jsonObject2 = new JSONObject(addMessage);
+									int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
+									needToAdd = true;
+									ObjectIDToAdd = Integer.toString(returnObjectID);
+								}
+								//need to check hash map itself after the loop end!!!
+							}
+							if(needToEdit == true) {
+								pointsOnMap.remove(ObjectIDToRemove);//remove the old item in hash map
+								pointsOnMap.put(ObjectIDToRemove, bufferFeature);//add new one in hash map(edit will not change the ObjectID)
+								needToEdit = false;
+							}
+							if(needToAdd == true) {
+								pointsOnMap.put(ObjectIDToAdd, bufferFeature);
+								needToAdd = false;
+							}
+						}
+					}
+				}//end for loop (comparing with web data and server data and update the map and hash map by compared data) 
+				
+				//if hash map size larger than the data gets from web need to change(delete only)	
+				if(pointsOnMap.size() > webDatalist.size()) {
+					// point in hash map more than on server, need to remove
+					HashMap<String, features> bufferHashMap = new HashMap<String, features>();				
+					for(int z = 0; z<webDatalist.size(); z++) {
+						for (String ObjectID : pointsOnMap.keySet()) {
+							if(pointsOnMap.get(ObjectID).getTrackerSerialNo().equals(webDatalist.get(z).gettracker_serial_no())) {
+								//put the data which we need to keep in hash map to a buffer hash map		
+								bufferHashMap.put(ObjectID, pointsOnMap.get(ObjectID));
+							}
+						}
+					}
+					pointsOnMap.clear();
+					pointsOnMap.putAll(bufferHashMap);
+				}//end checking and update the hash map
+				
+				UpdateStreamingMap();//delete the data on the map but not in the hash map
+				
+				//after comparing, deinitialize the arrays
+				MapIDList.clear();	//clear the map query result array list		
+				webDatalist.clear(); //clear the input array list
+				Thread.sleep(100);//delay 0.1 sec (100 milliseconds)
+				
+			} catch (Exception e) {
+			     e.printStackTrace();
+			}//end try			
+		}//end while	
+	}//end main
+	
+	public static void UpdateStreamingMap() throws IOException, InterruptedException, JSONException {		
+		//This method desire how to delete the wrong map data(MapIDList) using the objectID in map with the added points by HashMap	
+		String queryMessage = queryObjectId();
+		putQueryResultToArray(queryMessage);//put query data on map to MapIDList
+		boolean sameID = false;
+		
+		//delete the points on map but not in hash map
+		for(int j = 0; j <MapIDList.size(); j++) {			
+			//find the Object on map (map points) are exist in hash map or not
+			for (String ObjectID : pointsOnMap.keySet()) {			
+				if(Integer.toString(MapIDList.get(j).getOBJECTID()).equals(ObjectID)) {
+					sameID = true;//the id is on both map and hash map == correct point
+				}			
+			}
+			if(sameID == false) {
+				//the MapIDList.get(j) is wrong point on map
+				deleteFeatures(Integer.toString(MapIDList.get(j).getOBJECTID()));
+			}
+			sameID = false;			
+		}
+	}
+	
+	public static String queryObjectId() throws IOException{
+		// TODO edit Features
+		String url = "https://services8.arcgis.com/72HzQ6Z7vr5jaZgk/arcgis/rest/services/Test/FeatureServer/0/query";
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");	
+		Map<String,String> arguments = new HashMap<>();
+		
+		//change!!!
+		arguments.put("f", "json");
+		arguments.put("where", "1=1");
+		arguments.put("outSr", "4326");
+		arguments.put("outFields", "objectId");
+		
+		StringJoiner sj = new StringJoiner("&");
+		for(Map.Entry<String,String> entry : arguments.entrySet())
+		    sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "=" 
+		         + URLEncoder.encode(entry.getValue(), "UTF-8"));
+		byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+		int length = out.length;	
+		con.setFixedLengthStreamingMode(length);
+		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		con.connect();
+		try(OutputStream os = con.getOutputStream()) {
+		    os.write(out);
+		}		
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+		BufferedReader in = new BufferedReader(
+			         new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+		while ((inputLine = in.readLine()) != null) {
+			 response.append(inputLine);
+		}
+		in.close(); 
+		System.out.println(response.toString());	 
+		return response.toString();		
+	}
+	
+	public static String deleteFeatures(String idToDelete) throws IOException{
+		// TODO Delete Features with same ID
+		String url = "https://services8.arcgis.com/72HzQ6Z7vr5jaZgk/arcgis/rest/services/Test/FeatureServer/0/applyEdits";
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");	
+		Map<String,String> arguments = new HashMap<>();
+		
+		//change!!!
+		arguments.put("f", "json");
+		arguments.put("token", token);
+		arguments.put("deletes", idToDelete);
+		
+		
+		StringJoiner sj = new StringJoiner("&");
+		for(Map.Entry<String,String> entry : arguments.entrySet())
+		    sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "=" 
+		         + URLEncoder.encode(entry.getValue(), "UTF-8"));
+		byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+		int length = out.length;	
+		con.setFixedLengthStreamingMode(length);
+		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		con.connect();
+		try(OutputStream os = con.getOutputStream()) {
+		    os.write(out);
+		}		
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+		BufferedReader in = new BufferedReader(
+			         new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+		while ((inputLine = in.readLine()) != null) {
+			 response.append(inputLine);
+		}
+		in.close(); 
+		System.out.println(response.toString());	 
+		return response.toString();	//return a json string. EG:{"addResults":[],"updateResults":[],"deleteResults":[{"objectId":8,"uniqueId":8,"globalId":null,"success":true}]}
+	}
+	
+	public static String editFeatures(String valueToAdd) throws IOException{
+		// TODO edit Features
+		String url = "https://services8.arcgis.com/72HzQ6Z7vr5jaZgk/arcgis/rest/services/Test/FeatureServer/0/applyEdits";
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");	
+		Map<String,String> arguments = new HashMap<>();
+		
+		//change!!!
+		arguments.put("f", "json");
+		arguments.put("token", token);
+		arguments.put("updates", valueToAdd);
+		
+		
+		StringJoiner sj = new StringJoiner("&");
+		for(Map.Entry<String,String> entry : arguments.entrySet())
+		    sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "=" 
+		         + URLEncoder.encode(entry.getValue(), "UTF-8"));
+		byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+		int length = out.length;	
+		con.setFixedLengthStreamingMode(length);
+		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		con.connect();
+		try(OutputStream os = con.getOutputStream()) {
+		    os.write(out);
+		}		
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+		BufferedReader in = new BufferedReader(
+			         new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+		while ((inputLine = in.readLine()) != null) {
+			 response.append(inputLine);
+		}
+		in.close(); 
+		System.out.println(response.toString());	 
+		return response.toString();		
+	}
+	
+	public static String addFeatures(String valueToAdd) throws IOException{
+		// TODO add New Features
+		String url = "https://services8.arcgis.com/72HzQ6Z7vr5jaZgk/arcgis/rest/services/Test/FeatureServer/0/applyEdits";
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");	
+		Map<String,String> arguments = new HashMap<>();
+		
+		//change!!!
+		arguments.put("f", "json");
+		arguments.put("token", token);
+		arguments.put("adds", valueToAdd);
+		
+		
+		StringJoiner sj = new StringJoiner("&");
+		for(Map.Entry<String,String> entry : arguments.entrySet())
+		    sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "=" 
+		         + URLEncoder.encode(entry.getValue(), "UTF-8"));
+		byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+		int length = out.length;	
+		con.setFixedLengthStreamingMode(length);
+		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		con.connect();
+		try(OutputStream os = con.getOutputStream()) {
+		    os.write(out);
+		}		
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+		BufferedReader in = new BufferedReader(
+			         new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+		while ((inputLine = in.readLine()) != null) {
+			 response.append(inputLine);
+		}
+		in.close(); 
+		System.out.println(response.toString());	 
+		return response.toString();		
+	}
+	
+	public static String getToken() throws IOException {
+		// TODO get token
+		String url = "https://www.arcgis.com/sharing/rest/oauth2/token";
+		URL obj = new URL(url);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		con.setRequestProperty("User-Agent", "Mozilla/5.0");	
+		Map<String,String> arguments = new HashMap<>();
+		arguments.put("client_id", "J5ZFNI4rhbfDVyfB");
+		arguments.put("client_secret", "56909c75a66d4ba899b8bd811bbcad98");
+		arguments.put("grant_type", "client_credentials"); 
+		StringJoiner sj = new StringJoiner("&");
+		for(Map.Entry<String,String> entry : arguments.entrySet())
+		    sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "=" 
+		         + URLEncoder.encode(entry.getValue(), "UTF-8"));
+		byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
+		int length = out.length;	
+		con.setFixedLengthStreamingMode(length);
+		con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+		con.connect();
+		try(OutputStream os = con.getOutputStream()) {
+		    os.write(out);
+		}
+		
+		int responseCode = con.getResponseCode();
+		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("Response Code : " + responseCode);
+		BufferedReader in = new BufferedReader(
+			         new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+		while ((inputLine = in.readLine()) != null) {
+			 response.append(inputLine);
+		}
+		in.close(); 
+		System.out.println(response.toString());	 
+		return response.toString();		
+	}
+	
+	public static String getWebData() throws IOException {
+		// TODO get web data ()
+		String url = "https://smart-tunnel.rocteccloud.com:9001/api/location";
+		URL obj = new URL(url);
+	    HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+	    // optional default is GET
+	    con.setRequestMethod("GET");
+	    //add request header
+	    con.setRequestProperty("User-Agent", "Mozilla/5.0");
+	    int responseCode = con.getResponseCode();
+	    System.out.println("\nSending 'GET' request to URL : " + url);
+	    System.out.println("Response Code : " + responseCode);
+	    BufferedReader in = new BufferedReader(
+	             new InputStreamReader(con.getInputStream()));
+	    String inputLine;
+	    StringBuffer response = new StringBuffer();
+	    while ((inputLine = in.readLine()) != null) {
+	     	response.append(inputLine);
+	    }
+	    in.close();
+	    //print in String
+	    System.out.println(response.toString());	    
+        //readWebJSON(timeLog);
+		return response.toString();
+	}
+
+	public static void readWebData(String JSONString) throws JSONException {
+		JSONArray dataList =new JSONArray(JSONString);
+        //Show get in JSON File	
+        double location_long;
+        double location_lat;
+        String updated;
+        
+        for(int i = 0; i<dataList.length(); i++) {
+        	JSONObject features = dataList.getJSONObject(i);
+        	String tracker_serial_no = (String) features.get("tracker_serial_no");
+        	String worker_name = (String) features.get("worker_name");
+        	String worker_number = (String) features.get("worker_number");
+        	int intworker_number = Integer.parseInt(worker_number);
+        	String team_etms = (String) features.get("team_etms");
+        	
+        	try{
+        		location_long = (double) features.get("location_long");
+        	}catch(Exception e) {
+        		location_long = Double.valueOf((String) features.get("location_long"));
+        	}
+        	try{
+        		location_lat = (double) features.get("location_lat");
+        	}catch(Exception e) {
+        		location_lat = Double.valueOf((String) features.get("location_lat"));
+        	}
+        	//location_long = (double) features.get("location_long");
+        	//location_lat = (double) features.get("location_lat");
+        	String major = (String) features.get("major");
+        	String minor = (String) features.get("minor");
+        	boolean train = (boolean) features.get("train");
+        	try{
+        		updated = (String) features.get("update");
+        	}catch(Exception e) {
+        		updated = (String) features.get("updated");
+        	}
+        	webDatalist.add(new webFeatures(tracker_serial_no, worker_name, intworker_number, team_etms, location_long, location_lat, major, minor, train, updated));       	            	
+        	
+        }
+	}
+	
+	public static String writeWebJSONtoFile(String webOutputJSONString) throws JSONException {
+		
+	    String fileName = "webData.json";
+	    try (FileWriter file = new FileWriter(fileName)) {	    	 
+            file.write(webOutputJSONString);
+            file.flush(); 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }    
+		return fileName;
+	}
+	
+	public static void readWebfileJSON(String fileName) throws JSONException {
+		 
+		try (FileReader reader = new FileReader(fileName))//geojson sample.json
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONArray dataList = (JSONArray) obj;	
+	            double location_long;
+	            double location_lat;
+	            String updated;
+	            
+	            for(int i = 0; i<dataList.length(); i++) {
+	            	JSONObject features = dataList.getJSONObject(i);
+	            	String tracker_serial_no = (String) features.get("tracker_serial_no");
+	            	String worker_name = (String) features.get("worker_name");
+	            	String worker_number = (String) features.get("worker_number");
+	            	int intworker_number = Integer.parseInt(worker_number);
+	            	String team_etms = (String) features.get("team_etms");
+	            	
+	            	try{
+	            		location_long = (double) features.get("location_long");
+	            	}catch(Exception e) {
+	            		location_long = Double.valueOf((String) features.get("location_long"));
+	            	}
+	            	try{
+	            		location_lat = (double) features.get("location_lat");
+	            	}catch(Exception e) {
+	            		location_lat = Double.valueOf((String) features.get("location_lat"));
+	            	}
+	            	//location_long = (double) features.get("location_long");
+	            	//location_lat = (double) features.get("location_lat");
+	            	String major = (String) features.get("major");
+	            	String minor = (String) features.get("minor");
+	            	boolean train = (boolean) features.get("train");
+	            	try{
+	            		updated = (String) features.get("update");
+	            	}catch(Exception e) {
+	            		updated = (String) features.get("updated");
+	            	}
+	            	webDatalist.add(new webFeatures(tracker_serial_no, worker_name, intworker_number, team_etms, location_long, location_lat, major, minor, train, updated));       	            	
+	            	
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+		
+	}
+	
+	public static void readUPJSON(String fileName) throws JSONException {
+		 try (InputStream reader = jsonToGeoJSON.class.getResourceAsStream(fileName))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONObject dataList = (JSONObject) obj;	        
+	            //String layer0 = (String) dataList.get("type");
+	            //System.out.println(layer0);//remove after testing,(output: FeatureCollection)	            
+	            
+	            JSONArray a = (JSONArray) dataList.get("features");//first layer	            
+	            
+	            double Easting;
+	            double Northing;
+	            
+	            //features a = new featuresfileName, 0, fileName, Northing, Northing, 0, 0, fileName, fileName, 0, Northing, Northing;
+	            //variable declaration should put out of loop after testing finish
+	            for(int i = 0; i<a.length(); i++) {
+	            	
+	            	//features
+	            	JSONObject features = a.getJSONObject(i);
+	            	String type = (String) features.get("type");
+	            	int id = (int) features.get("id");
+
+	            	//features/geometry
+	            	JSONObject geometry = (JSONObject) features.get("geometry");
+	            	String geometryType = (String) geometry.get("type");
+	            	JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+	            	double Xcoordinate = coordinates.getDouble(0);
+	            	double Ycoordinate = coordinates.getDouble(1);
+	            	
+	            	//features/properties
+	            	JSONObject properties = (JSONObject) features.get("properties");
+	            	int OBJECTID = (int) properties.get("OBJECTID");
+	            	int Point_ID = (int) properties.get("Point_ID");
+	            	String Point_Name = (String) properties.get("Point_Name");
+	            	String Track = (String) properties.get("Track");
+	            	int Chainage = (int) properties.get("Chainage");
+	            	try{
+	            		Easting = (double) properties.get("Easting");
+	            	}catch(Exception e) {
+	            		Easting = (int) properties.get("Easting");
+	            	}
+	            	try{
+	            		Northing = (double) properties.get("Northing");
+	            	}catch(Exception e) {
+	            		Northing = (int) properties.get("Northing");
+	            	}	            
+	            	UPDatalist.add(new features(type, id, geometryType, Xcoordinate, Ycoordinate, OBJECTID, Point_ID, Point_Name, Track, Chainage, Easting, Northing));       	            	
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void readDOWNJSON(String fileName) throws JSONException {
+		try (InputStream reader = jsonToGeoJSON.class.getResourceAsStream(fileName))
+		//try (FileReader reader = new FileReader(fileName))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONObject dataList = (JSONObject) obj;	        
+	            //String layer0 = (String) dataList.get("type");
+	            //System.out.println(layer0);//remove after testing,(output: FeatureCollection)	            
+	            
+	            JSONArray a = (JSONArray) dataList.get("features");//first layer	            
+	            
+	            double Easting;
+	            double Northing;
+	            
+	            //features a = new featuresfileName, 0, fileName, Northing, Northing, 0, 0, fileName, fileName, 0, Northing, Northing;
+	            //variable declaration should put out of loop after testing finish
+	            for(int i = 0; i<a.length(); i++) {
+	            	
+	            	//features
+	            	JSONObject features = a.getJSONObject(i);
+	            	String type = (String) features.get("type");
+	            	int id = (int) features.get("id");
+
+	            	//features/geometry
+	            	JSONObject geometry = (JSONObject) features.get("geometry");
+	            	String geometryType = (String) geometry.get("type");
+	            	JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+	            	double Xcoordinate = coordinates.getDouble(0);
+	            	double Ycoordinate = coordinates.getDouble(1);
+	            	
+	            	//features/properties
+	            	JSONObject properties = (JSONObject) features.get("properties");
+	            	int OBJECTID = (int) properties.get("OBJECTID");
+	            	int Point_ID = (int) properties.get("Point_ID");
+	            	String Point_Name = (String) properties.get("Point_Name");
+	            	String Track = (String) properties.get("Track");
+	            	int Chainage = (int) properties.get("Chainage");
+	            	try{
+	            		Easting = (double) properties.get("Easting");
+	            	}catch(Exception e) {
+	            		Easting = (int) properties.get("Easting");
+	            	}
+	            	try{
+	            		Northing = (double) properties.get("Northing");
+	            	}catch(Exception e) {
+	            		Northing = (int) properties.get("Northing");
+	            	}
+	            	DOWNDatalist.add(new features(type, id, geometryType, Xcoordinate, Ycoordinate, OBJECTID, Point_ID, Point_Name, Track, Chainage, Easting, Northing));       	            	
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void writeJSON(String fileName, ArrayList<features> ArraylistneedsToConvert) throws JSONException {
+		
+		JSONArray trainList = new JSONArray();		
+		
+		for(int i = 0; i < ArraylistneedsToConvert.size(); i++) {
+			
+			JSONObject geometry = new JSONObject();
+			geometry.put("type", "Point");
+			geometry.put("coordinates", "["+ArraylistneedsToConvert.get(i).getXcoordinate()+","+ArraylistneedsToConvert.get(i).getYcoordinate()+"]");      
+			
+			JSONObject properties = new JSONObject();
+			properties.put("OBJECTID", ArraylistneedsToConvert.get(i).getObjectID());
+			properties.put("Point_ID", ArraylistneedsToConvert.get(i).getPoint_ID());
+			properties.put("Point_Name", ArraylistneedsToConvert.get(i).getPointName());
+			properties.put("Track", ArraylistneedsToConvert.get(i).getTrack());
+			properties.put("Chainage", ArraylistneedsToConvert.get(i).getChainage());
+			properties.put("Easting", ArraylistneedsToConvert.get(i).getEasting());
+			properties.put("Northing", ArraylistneedsToConvert.get(i).getNorthting());
+			
+	        JSONObject train = new JSONObject();
+	        train.put("type", "Feature");
+	        train.put("id", ArraylistneedsToConvert.get(i).getId());
+	        train.put("geometry", geometry);
+	        train.put("properties", properties);
+	        
+	        trainList.put(train);
+		}      
+         
+        //Write JSON file
+        try (FileWriter file = new FileWriter(fileName)) {
+ 
+            file.write("{\"type\":\"FeatureCollection\",\"features\":"
+            		+ trainList.toString() + "}");
+            file.flush();
+ 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+	}
+	
+	public static void putQueryResultToArray(String queryMessage) throws JSONException {
+		JSONObject jsonObject = new JSONObject(queryMessage);
+		JSONArray a = (JSONArray) jsonObject.getJSONArray("features");
+		
+		double Xcoordinate;
+		double Ycoordinate;
+		for(int i = 0; i<a.length(); i++) {
+			JSONObject features = a.getJSONObject(i);
+        	JSONObject attributes = (JSONObject) features.get("attributes");
+        	int OBJECTID = (int) attributes.get("OBJECTID");
+        	JSONObject geometry = (JSONObject) features.get("geometry");
+        	try{
+        		Xcoordinate = (double) geometry.get("x");
+        	}catch(Exception e) {
+        		Xcoordinate = (int) geometry.get("x");
+        	}
+        	try{
+        		Ycoordinate = (double) geometry.get("y");
+        	}catch(Exception e) {
+        		Ycoordinate = (int) geometry.get("y");
+        	}
+        	MapIDList.add(new queryResult(OBJECTID, Xcoordinate, Ycoordinate));
+        	//System.out.println(MapIDList.get(i).toString());
+		}
+	}
+	
+	public static void writeHashmapJSON() {
+		
+	}
+	
+}

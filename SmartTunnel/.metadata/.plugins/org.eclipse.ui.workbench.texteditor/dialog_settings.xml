@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.GotoLineAction$GotoLineDialog_dialogBounds">
+		<item value="492" key="DIALOG_X_ORIGIN"/>
+		<item value="272" key="DIALOG_Y_ORIGIN"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="isRegEx"/>
+		<item value="UPDatalist" key="selection"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="incremental"/>
+		<item value="true" key="wrap"/>
+		<item value="false" key="wholeword"/>
+		<list key="findhistory">
+			<item value="queryObjectId"/>
+			<item value="UPDatalist"/>
+			<item value="MapIDList"/>
+			<item value="deleteFeatures"/>
+			<item value="pointsOnMap"/>
+			<item value="train"/>
+			<item value="direction"/>
+			<item value="UpdateStreamingMap"/>
+			<item value="webDatalist"/>
+			<item value="addFeatures"/>
+			<item value="addResults"/>
+			<item value="getWebData"/>
+			<item value="setTrackerSerialNo"/>
+			<item value="tracker_serial_no"/>
+			<item value="geoJSONObjectList"/>
+		</list>
+		<list key="replacehistory">
+			<item value=""/>
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="337" key="DIALOG_WIDTH"/>
+		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-15|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+		<item value="468" key="DIALOG_HEIGHT"/>
+		<item value="1052" key="DIALOG_X_ORIGIN"/>
+		<item value="62" key="DIALOG_Y_ORIGIN"/>
+	</section>
+</section>

@@ -1,0 +1,88 @@
+package JsonToGeoJson;
+
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+
+import org.json.*;
+import org.geotools.*;
+
+public class jsonToGeoJSON {
+
+	public static void main(String[] args) throws JSONException {
+		//writeJSON();
+		readJSON();     
+		
+	}
+	
+	public static void readJSON() throws JSONException {
+		 try (FileReader reader = new FileReader("twl_down.geojson"))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse read file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            
+	            //Read JSON file
+	            Object obj = jsonParser.nextValue();
+	            
+	            //Show data in JSON File
+	            //JSONArray employeeList = (JSONArray) obj;
+	            System.out.println(obj);
+	            /*
+	            JSONObject employeeObject;
+	            for(int i = 0; i<employeeList.length(); i++) {
+	            	employeeObject = employeeList.getJSONObject(i);
+	            	//parseEmployeeObject(employeeObject);
+	            }
+	            */
+	            //how to finish the conversion of geojson to json 
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void writeJSON() throws JSONException {
+		JSONObject employeeDetails = new JSONObject();
+	       employeeDetails.put("firstName", "Lokesh");
+	       employeeDetails.put("lastName", "Gupta");
+	       employeeDetails.put("website", "howtodoinjava.com");
+	        
+	       JSONObject employeeObject = new JSONObject();
+	       employeeObject.put("employee", employeeDetails);
+	       
+	       //Add employees to list
+	       JSONArray employeeList = new JSONArray();
+	       employeeList.put(employeeObject);
+	       
+	       //Write JSON file
+	       try (FileWriter file = new FileWriter("employees.json")) {
+
+	           file.write(employeeList.toString());
+	           file.flush();
+
+	       } catch (IOException e) {
+	           e.printStackTrace();
+	       }
+	}
+	
+	private static void parseEmployeeObject(JSONObject employee) throws JSONException
+    {
+        //Get employee object within list
+        JSONObject employeeObject = (JSONObject) employee.get("employee");
+         
+        //Get employee first name
+        String firstName = (String) employeeObject.get("firstName");   
+        System.out.println(firstName);
+         
+        //Get employee last name
+        String lastName = (String) employeeObject.get("lastName"); 
+        System.out.println(lastName);
+         
+        //Get employee website name
+        String website = (String) employeeObject.get("website");   
+        System.out.println(website);
+    }
+
+}

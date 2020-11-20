@@ -1,0 +1,332 @@
+package JsonToGeoJson;
+
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.io.FileNotFoundException;
+
+import org.json.*;
+
+public class jsonToGeoJSON {
+	
+	public static ArrayList<features> UPDatalist = new ArrayList<features>();
+	public static ArrayList<features> DOWNDatalist = new ArrayList<features>();
+	public static ArrayList<webFeatures> webDatalist = new ArrayList<webFeatures>();
+	public static ArrayList<features> geoJSONObjectList = new ArrayList<features>();
+	
+	public static void main(String[] args) throws JSONException {
+		//initialize the database (load up and down data to arraylist)
+		readUPJSON("twl_up.geojson");
+		readDOWNJSON("twl_down.geojson");
+		//end of init	
+		
+		//code below will be loop forever in real application
+		//while(true){
+		//	try{
+		//the "geojson sample.json" will get from server.....
+		readWebJSON("geojson sample.json");			
+		
+		for(int i = 0; i < webDatalist.size(); i++) {
+			
+			System.out.println("Train in tunnel:"+webDatalist.get(i).determineTrainIntunnel()+ 
+							", train up track:" +webDatalist.get(i).determineTrainUPDOWN());
+			
+			if(webDatalist.get(i).determineTrainIntunnel() == true) {//train in tunnel, compare with minor
+				
+				if(webDatalist.get(i).determineTrainUPDOWN() == true) {
+					//up //XX01
+					int min = Integer.parseInt(webDatalist.get(i).getminor());
+					int idx = 0;			
+					//minor = objectID
+					for(int j = 0; j < UPDatalist.size(); j++) {
+						if(min == UPDatalist.get(j).getObjectID()) {
+							idx = j;
+						}
+					}
+					int theNumber = UPDatalist.get(idx).getId() - 1;
+					System.out.println(UPDatalist.get(theNumber).toString());
+					//one of the data to convert to geojson			
+					geoJSONObjectList.add(UPDatalist.get(theNumber));
+					
+					
+				}else if(webDatalist.get(i).determineTrainUPDOWN() == false) {
+					//DOWN //XX02
+					int min = Integer.parseInt(webDatalist.get(i).getminor());
+					int idx = 0;
+					
+					//minor = objectID
+					for(int j = 0; j < DOWNDatalist.size(); j++) {
+						if(min == DOWNDatalist.get(j).getObjectID()) {
+							idx = j;
+						}
+					}
+					int theNumber = DOWNDatalist.get(idx).getId() - 1;
+					System.out.println(DOWNDatalist.get(theNumber).toString());
+					//one of the data to convert to geojson	
+					geoJSONObjectList.add(DOWNDatalist.get(theNumber));
+				}
+			
+			}
+			else {//train not in tunnel, compare with GPS
+				
+				if(webDatalist.get(i).determineTrainUPDOWN() == true) {
+					
+					//search by X coordinate	
+					double Xdistance = Math.abs(UPDatalist.get(0).getXcoordinate() - webDatalist.get(i).getlocation_long());
+					//double Ydistance = Math.abs(UPDatalist.get(0).getYcoordinate() - webDatalist.get(i).getlocation_lat());
+					int idx = 0;
+					for(int j = 1; j < UPDatalist.size(); j++) {
+						double cdistance = Math.abs(UPDatalist.get(i).getXcoordinate() - webDatalist.get(i).getlocation_long());
+						 if(cdistance < Xdistance){
+						        idx = j;
+						        Xdistance = cdistance;
+						 }
+					}
+					int theNumber = UPDatalist.get(idx).getId();
+					System.out.println(UPDatalist.get(theNumber).toString());				
+					geoJSONObjectList.add(UPDatalist.get(theNumber));
+				}
+				else if(webDatalist.get(i).determineTrainUPDOWN() == false){
+					
+					//search by X coordinate
+					double Xdistance = Math.abs(DOWNDatalist.get(0).getXcoordinate() - webDatalist.get(i).getlocation_long());
+					//double Ydistance = Math.abs(DOWNDatalist.get(0).getYcoordinate() - webDatalist.get(i).getlocation_lat());
+					int idx = 0;
+					for(int j = 1; j < DOWNDatalist.size(); j++) {
+						double cdistance = Math.abs(DOWNDatalist.get(i).getXcoordinate() - webDatalist.get(i).getlocation_long());
+						 if(cdistance < Xdistance){
+						        idx = j;
+						        Xdistance = cdistance;
+						 }
+					}				
+					int theNumber = DOWNDatalist.get(idx).getId();
+					System.out.println(DOWNDatalist.get(theNumber).toString());
+					geoJSONObjectList.add(DOWNDatalist.get(theNumber));				
+				}
+			}
+		}
+		//end of comparing with web data and server data (for loop)
+		//convert data to a geojson file
+		writeJSON("exportGEOJSON.geojson", geoJSONObjectList);
+		//export the geojson file to web
+	}
+	
+	public static void readWebJSON(String fileName) throws JSONException {
+		 try (FileReader reader = new FileReader(fileName))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONArray dataList = (JSONArray) obj;	        
+	            
+	            for(int i = 0; i<dataList.length(); i++) {
+	            	JSONObject features = dataList.getJSONObject(i);
+	            	String tracker_serial_no = (String) features.get("tracker_serial_no");
+	            	String worker_name = (String) features.get("worker_name");
+	            	String worker_number = (String) features.get("worker_number");
+	            	int intworker_number = Integer.parseInt(worker_number);
+	            	String team_etms = (String) features.get("team_etms");
+	            	double location_long = (double) features.get("location_long");
+	            	double location_lat = (double) features.get("location_lat");
+	            	String major = (String) features.get("major");
+	            	//int intmajor = Integer.parseInt(major);
+	            	String minor = (String) features.get("minor");
+	            	//int intminor = Integer.parseInt(minor);
+	            	boolean train = (boolean) features.get("train");
+	            	String updated = (String) features.get("updated");
+	            	webDatalist.add(new webFeatures(tracker_serial_no, worker_name, intworker_number, team_etms, location_long, location_lat, major, minor, train, updated));       	            	
+	            	
+	            	//System.out.println(intmajor);
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void readUPJSON(String fileName) throws JSONException {
+		 try (FileReader reader = new FileReader(fileName))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONObject dataList = (JSONObject) obj;	        
+	            //String layer0 = (String) dataList.get("type");
+	            //System.out.println(layer0);//remove after testing,(output: FeatureCollection)	            
+	            
+	            JSONArray a = (JSONArray) dataList.get("features");//first layer	            
+	            
+	            double Easting;
+	            double Northing;
+	            
+	            //features a = new featuresfileName, 0, fileName, Northing, Northing, 0, 0, fileName, fileName, 0, Northing, Northing;
+	            //variable declaration should put out of loop after testing finish
+	            for(int i = 0; i<a.length(); i++) {
+	            	
+	            	//features
+	            	JSONObject features = a.getJSONObject(i);
+	            	String type = (String) features.get("type");
+	            	int id = (int) features.get("id");
+
+	            	//features/geometry
+	            	JSONObject geometry = (JSONObject) features.get("geometry");
+	            	String geometryType = (String) geometry.get("type");
+	            	JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+	            	double Xcoordinate = coordinates.getDouble(0);
+	            	double Ycoordinate = coordinates.getDouble(1);
+	            	
+	            	//features/properties
+	            	JSONObject properties = (JSONObject) features.get("properties");
+	            	int OBJECTID = (int) properties.get("OBJECTID");
+	            	int Point_ID = (int) properties.get("Point_ID");
+	            	String Point_Name = (String) properties.get("Point_Name");
+	            	String Track = (String) properties.get("Track");
+	            	int Chainage = (int) properties.get("Chainage");
+	            	try{
+	            		Easting = (double) properties.get("Easting");
+	            	}catch(Exception e) {
+	            		Easting = (int) properties.get("Easting");
+	            	}
+	            	try{
+	            		Northing = (double) properties.get("Northing");
+	            	}catch(Exception e) {
+	            		Northing = (int) properties.get("Northing");
+	            	}
+	            	/*
+	            	System.out.println("type:" + type + ", id:" + id
+	            			+ ", geometryType:" + geometryType + 
+	            			" X:" + Xcoordinate + " Y:" + Ycoordinate
+	            			+" OBJECTID:" + OBJECTID +" Point_ID:" + Point_ID
+	            			+" Point_Name:" + Point_Name +" Track:" + Track
+	            			+" Chainage:" + Chainage
+	            			+" Easting:" + Easting +" Northing:" + Northing);
+	            	*/
+	            	UPDatalist.add(new features(type, id, geometryType, Xcoordinate, Ycoordinate, OBJECTID, Point_ID, Point_Name, Track, Chainage, Easting, Northing));       	            	
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void readDOWNJSON(String fileName) throws JSONException {
+		 try (FileReader reader = new FileReader(fileName))//twl_down.geojson
+	        {
+	    		//JSON parser object to parse and read json file
+	            JSONTokener jsonParser = new JSONTokener(reader);
+	            Object obj = jsonParser.nextValue();
+	      
+	            //Show get in JSON File
+	            JSONObject dataList = (JSONObject) obj;	        
+	            //String layer0 = (String) dataList.get("type");
+	            //System.out.println(layer0);//remove after testing,(output: FeatureCollection)	            
+	            
+	            JSONArray a = (JSONArray) dataList.get("features");//first layer	            
+	            
+	            double Easting;
+	            double Northing;
+	            
+	            //features a = new featuresfileName, 0, fileName, Northing, Northing, 0, 0, fileName, fileName, 0, Northing, Northing;
+	            //variable declaration should put out of loop after testing finish
+	            for(int i = 0; i<a.length(); i++) {
+	            	
+	            	//features
+	            	JSONObject features = a.getJSONObject(i);
+	            	String type = (String) features.get("type");
+	            	int id = (int) features.get("id");
+
+	            	//features/geometry
+	            	JSONObject geometry = (JSONObject) features.get("geometry");
+	            	String geometryType = (String) geometry.get("type");
+	            	JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+	            	double Xcoordinate = coordinates.getDouble(0);
+	            	double Ycoordinate = coordinates.getDouble(1);
+	            	
+	            	//features/properties
+	            	JSONObject properties = (JSONObject) features.get("properties");
+	            	int OBJECTID = (int) properties.get("OBJECTID");
+	            	int Point_ID = (int) properties.get("Point_ID");
+	            	String Point_Name = (String) properties.get("Point_Name");
+	            	String Track = (String) properties.get("Track");
+	            	int Chainage = (int) properties.get("Chainage");
+	            	try{
+	            		Easting = (double) properties.get("Easting");
+	            	}catch(Exception e) {
+	            		Easting = (int) properties.get("Easting");
+	            	}
+	            	try{
+	            		Northing = (double) properties.get("Northing");
+	            	}catch(Exception e) {
+	            		Northing = (int) properties.get("Northing");
+	            	}
+	            	/*
+	            	System.out.println("type:" + type + ", id:" + id
+	            			+ ", geometryType:" + geometryType + 
+	            			" X:" + Xcoordinate + " Y:" + Ycoordinate
+	            			+" OBJECTID:" + OBJECTID +" Point_ID:" + Point_ID
+	            			+" Point_Name:" + Point_Name +" Track:" + Track
+	            			+" Chainage:" + Chainage
+	            			+" Easting:" + Easting +" Northing:" + Northing);
+	            	*/
+	            	DOWNDatalist.add(new features(type, id, geometryType, Xcoordinate, Ycoordinate, OBJECTID, Point_ID, Point_Name, Track, Chainage, Easting, Northing));       	            	
+	            }
+	            
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        }
+	}
+	
+	public static void writeJSON(String fileName, ArrayList<features> ArraylistneedsToConvert) throws JSONException {
+		
+		JSONArray trainList = new JSONArray();		
+		
+		for(int i = 0; i < ArraylistneedsToConvert.size(); i++) {
+			
+			JSONObject geometry = new JSONObject();
+			geometry.put("type", "Point");
+			geometry.put("coordinates", ArraylistneedsToConvert.get(i).getXcoordinate());      
+	        //geometry.put("coordinates", ArraylistneedsToConvert.get(i).getYcoordinate());
+			
+			JSONObject properties = new JSONObject();
+			properties.put("OBJECTID", ArraylistneedsToConvert.get(i).getObjectID());
+			properties.put("Point_ID", ArraylistneedsToConvert.get(i).getPoint_ID());
+			properties.put("Point_Name", ArraylistneedsToConvert.get(i).getPointName());
+			properties.put("Track", ArraylistneedsToConvert.get(i).getTrack());
+			properties.put("Chainage", ArraylistneedsToConvert.get(i).getChainage());
+			properties.put("Easting", ArraylistneedsToConvert.get(i).getEasting());
+			properties.put("Northing", ArraylistneedsToConvert.get(i).getNorthting());
+			
+	        JSONObject train = new JSONObject();
+	        train.put("type", "Feature");
+	        train.put("id", ArraylistneedsToConvert.get(i).getId());
+	        train.put("geometry", geometry);
+	        train.put("properties", properties);
+	        
+	        trainList.put(train);
+		}      
+         
+        //Write JSON file
+        try (FileWriter file = new FileWriter(fileName)) {
+ 
+            file.write("{\"type\":\"FeatureCollection\",\"features\":"
+            		+ ""+ trainList.toString() 
+            		+ ",\"type\":\"FeatureCollection\"}");
+            file.flush();
+ 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+	}
+
+}

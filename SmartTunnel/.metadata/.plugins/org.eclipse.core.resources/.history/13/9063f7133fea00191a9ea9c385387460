@@ -1,0 +1,11 @@
+package JsonToGeoJson;
+
+public class geoJSONObject extends features{
+
+	public geoJSONObject(String a, int b, String c, double d, double e, int f, int g, String h, String i, int j,
+			double k, double l) {
+		super(a, b, c, d, e, f, g, h, i, j, k, l);
+		// TODO Auto-generated constructor stub
+	}
+
+}

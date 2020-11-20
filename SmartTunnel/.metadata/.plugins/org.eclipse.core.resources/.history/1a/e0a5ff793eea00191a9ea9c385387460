@@ -1,0 +1,100 @@
+package JsonToGeoJson;
+
+public class features {
+	
+	private String type;
+	private int id;
+	
+	//geometry
+	private String geometryType;
+	private double Xcoordinate;
+	private double Ycoordinate;
+	
+	//properties
+	private int objectID;
+	private int point_ID;
+	private String pointName;
+	private String track;
+	private int chainage;
+	private double Easting;
+	private double Northting;
+	
+	public features(String a, int b, String c, double d, double e, 
+			int f, int g, String h, String i, int j, double k, double l){
+		this.type = a;
+		this.id = b;
+		this.geometryType = c;
+		this.Xcoordinate = d;
+		this.Ycoordinate = e;
+		this.objectID = f;
+		this.point_ID = g;
+		this.pointName = h;
+		this.track = i;
+		this.chainage = j;
+		this.Easting = k;
+		this.Northting = l;				
+	}
+	
+	public String getType() {
+		return this.type;	
+	}
+	
+	public int getId() {
+		return this.id;	
+	}
+	
+	public String geometryType() {
+		return this.geometryType;	
+	}
+	
+	public double getXcoordinate() {
+		return this.Xcoordinate;	
+	}
+	
+	public double getYcoordinate() {
+		return this.Ycoordinate;	
+	}
+	
+	public int getObjectID() {
+		return this.objectID;	
+	}
+	
+	public int getPoint_ID() {
+		return this.point_ID;	
+	}
+	
+	public String getPointName() {
+		return this.pointName;	
+	}
+	
+	public String getTrack() {
+		return this.track;	
+	}
+	
+	public int getChainage() {
+		return this.chainage;	
+	}
+	
+	public double getEasting() {
+		return this.Easting;	
+	}
+	
+	public double getNorthting() {
+		return this.Northting;	
+	}
+
+	@Override
+	public String toString() {
+		return "type:" + type + ", id:" + id
+    			+ ", geometryType:" + geometryType + 
+    			" X:" + Xcoordinate + " Y:" + Ycoordinate
+    			+" OBJECTID:" + objectID +" Point_ID:" + point_ID
+    			+" Point_Name:" + pointName +" Track:" + track
+    			+" Chainage:" + chainage
+    			+" Easting:" + Easting +" Northing:" + Northting;	
+	}
+	
+	public String toGeoJson() {
+		return geometryType;		
+	}
+}

@@ -1,0 +1,5 @@
+package JsonToGeoJson;
+
+public class geoJSONObject {
+
+}

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy package &apos;JsonToGeoJson&apos; to &apos;UpdateServlet/src&apos;&#x0D;&#x0A;- Original project: &apos;JsonToGeoJson&apos;&#x0D;&#x0A;- Destination element: &apos;UpdateServlet/src&apos;&#x0D;&#x0A;- Original element: &apos;JsonToGeoJson/src/JsonToGeoJson&apos;" description="Copy package" destination="=UpdateServlet/src" element1="/src&lt;JsonToGeoJson" flags="589830" fragments="1" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyPackages" stamp="1571025235014" version="1.0"/>
+</session>
