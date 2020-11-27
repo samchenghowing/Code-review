@@ -117,17 +117,7 @@ public class jsonToGeoJSON {
 										ObjectIDToRemove = ObjectID;
 										needToEdit = true;
 										break;
-									}/*
-									else {
-										//add point in map and store the new key(returned ObjectID) in hash map
-										String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
-										logger.info(addMessage);  
-										JSONObject jsonObject2 = new JSONObject(addMessage);
-										int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
-										needToAdd = true;
-										ObjectIDToAdd = Integer.toString(returnObjectID);
-										break;
-									}*/
+									}
 									//need to check hash map itself after the loop end!!!
 								}
 								if(needToEdit == true) {
@@ -184,17 +174,7 @@ public class jsonToGeoJSON {
 										ObjectIDToRemove = ObjectID;
 										needToEdit = true;
 										break;
-									}/*
-									else {
-										//add point in map and store the new key(returned ObjectID) in hash map
-										String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
-										logger.info(addMessage);  
-										JSONObject jsonObject2 = new JSONObject(addMessage);
-										int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
-										needToAdd = true;
-										ObjectIDToAdd = Integer.toString(returnObjectID);
-										break;
-									}*/
+									}
 									//need to check hash map itself after the loop end!!!
 								}
 								if(needToEdit == true) {
@@ -328,17 +308,7 @@ public class jsonToGeoJSON {
 										ObjectIDToRemove = ObjectID;
 										needToEdit = true;
 										break;
-									}/*
-									else {
-										//add point in map and store the new key(returned ObjectID) in hash map
-										String addMessage = addFeatures(bufferFeature.toOutputAddJSON());//add first, if detect anything wrong, delete or edit			
-										logger.info(addMessage);  
-										JSONObject jsonObject2 = new JSONObject(addMessage);
-										int returnObjectID = jsonObject2.getJSONArray("addResults").getJSONObject(0).getInt("objectId");
-										needToAdd = true;
-										ObjectIDToAdd = Integer.toString(returnObjectID);
-										break;
-									}*/
+									}
 									//need to check hash map itself after the loop end!!!
 								}
 								if(needToEdit == true) {
